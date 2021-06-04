@@ -28,6 +28,10 @@ namespace KnowledgeSharing.Models
                 entity.Property(e => e.Title)
                     .HasMaxLength(100)
                     .IsUnicode(false);
+
+                entity.Property(e => e.UserInfo)
+                .HasMaxLength(100)
+                .IsUnicode(false);
             });
 
             modelBuilder.Entity<UserInfo>(entity =>

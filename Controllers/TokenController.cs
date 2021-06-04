@@ -65,9 +65,17 @@ namespace KnowledgeSharing.Controllers
             }
         }
 
-        private async Task<UserInfo> GetUser(string email, string password)
+        public async Task<UserInfo> GetUser(string email, string password)
         {
             return await _context.UserInfo.FirstOrDefaultAsync(u => u.Email == email && u.Password == password);
+        }
+        [HttpPost("registration")]
+        public async Task<ActionResult<UserInfo>> PostUser(UserInfo userInfo)
+        {
+            _context.UserInfo.Add(userInfo);
+            await _context.SaveChangesAsync();
+
+            return CreatedAtAction("GetUser", new {email = userInfo.Email, password = userInfo.Password }, userInfo);
         }
     }
 
