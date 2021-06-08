@@ -5,9 +5,12 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.IdentityModel.Tokens;
 using System;
 using System.IdentityModel.Tokens.Jwt;
+using System.Net;
+using System.Net.Http;
 using System.Security.Claims;
 using System.Text;
 using System.Threading.Tasks;
+
 
 namespace KnowledgeSharing.Controllers
 {
@@ -17,6 +20,8 @@ namespace KnowledgeSharing.Controllers
     {
         public IConfiguration _configuration;
         private readonly KnowledgeSharingContext _context;
+        public UserInfo user;
+        
 
         public TokenController(IConfiguration config, KnowledgeSharingContext context)
         {
@@ -24,26 +29,26 @@ namespace KnowledgeSharing.Controllers
             _context = context;
         }
 
-        [HttpPost]
+        [HttpPost("login")]
         public async Task<IActionResult> Post(UserInfo _userData)
         {
 
             if (_userData != null && _userData.Email != null && _userData.Password != null)
             {
-                var user = await GetUser(_userData.Email, _userData.Password);
+                this.user = await GetUser(_userData.Email, _userData.Password);
 
-                if (user != null)
+                if (this.user != null)
                 {
                     //create claims details based on the user information
                     var claims = new[] {
                     new Claim(JwtRegisteredClaimNames.Sub, _configuration["Jwt:Subject"]),
                     new Claim(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString()),
                     new Claim(JwtRegisteredClaimNames.Iat, DateTime.UtcNow.ToString()),
-                    new Claim("Id", user.UserId.ToString()),
-                    new Claim("FirstName", user.FirstName),
-                    new Claim("LastName", user.LastName),
-                    new Claim("UserName", user.UserName),
-                    new Claim("Email", user.Email)
+                    new Claim("Id", this.user.UserId.ToString()),
+                    new Claim("FirstName", this.user.FirstName),
+                    new Claim("LastName", this.user.LastName),
+                    new Claim("UserName", this.user.UserName),
+                    new Claim("Email", this.user.Email)
                    };
 
                     var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(_configuration["Jwt:Key"]));
@@ -56,12 +61,12 @@ namespace KnowledgeSharing.Controllers
                 }
                 else
                 {
-                    return BadRequest("Invalid credentials");
+                    throw new ArgumentException("Invalid credentials! Status: " + HttpStatusCode.NotFound);
                 }
             }
             else
             {
-                return BadRequest();
+                throw new ArgumentException("Please fill in all the fields to log in. Status: " + HttpStatusCode.BadRequest);
             }
         }
 
@@ -72,10 +77,18 @@ namespace KnowledgeSharing.Controllers
         [HttpPost("registration")]
         public async Task<ActionResult<UserInfo>> PostUser(UserInfo userInfo)
         {
-            _context.UserInfo.Add(userInfo);
-            await _context.SaveChangesAsync();
+            if (userInfo != null)
+            {
+                _context.UserInfo.Add(userInfo);
+                await _context.SaveChangesAsync();
 
-            return CreatedAtAction("GetUser", new {email = userInfo.Email, password = userInfo.Password }, userInfo);
+                return CreatedAtAction("GetUser", new { email = userInfo.Email, password = userInfo.Password }, userInfo);
+            }
+
+            else
+            {
+                throw new ArgumentException("Please fill in all the fields to log in. Status: " + HttpStatusCode.BadRequest);
+            }
         }
     }
 
